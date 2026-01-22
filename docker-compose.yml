@@ -1,0 +1,24 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: Yassers_laundry_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: Yassers_laundry
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # - ./interstellar-library:/app 
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d Yassers_laundry']
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres_data:    
