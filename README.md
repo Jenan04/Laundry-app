@@ -45,7 +45,7 @@ The app integrates **frontend UI**, **backend APIs**, **GraphQL**, and **NextAut
 ---
 
 ## 📂 Project Structure
-
+```
 Laundry-app/
 │
 ├── .next/ # Next.js build output
@@ -82,7 +82,7 @@ Laundry-app/
 ├── globals.css # Global styles
 ├── page.module.css # Page-specific styles
 └── middleware.ts # Custom middleware
-
+```
 ---
 
 ## ⚙️ Installation & Setup
