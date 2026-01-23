@@ -1,0 +1,168 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+
+}
+
+
+enum Role {
+  USER
+  ADMIN
+  WORKER
+  DRIVER
+}
+
+enum OrderStatus {
+  PENDING
+  ON_WORKING
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationType {
+  INFO
+  URGENT
+  ADMIN_ACTION
+}
+
+// ========================
+// USERS
+// ========================
+model User {
+  id           String       @id @default(uuid())
+  full_name    String
+  email        String       @unique
+  phone        String
+  location     String
+  role         Role        @default("USER")
+  passwordHash String?  
+  google_id    String?      @unique
+  is_verifid   Boolean      @default(false)
+  is_completed Boolean      @default(false) 
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  orders       Order[]      @relation("UserOrders")
+  workerOrders Order[]      @relation("WorkerOrders")
+  driverOrders Order[]      @relation("DriverOrders")
+
+  ratingsGiven  Rating[]    @relation("UserRatingsGiven")
+  ratingsRecvd  Rating[]    @relation("WorkerRatingsReceived")
+
+  userNotifications  Notification[]    @relation("UserNotifications")
+  adminNotifications Notification[]    @relation("AdminNotifications")
+}
+
+// ========================
+// SERVICES
+// ========================
+model Service {
+  id          String     @id @default(uuid())
+  name        String
+  category    String
+  price       Float
+  imageUrl    String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orders      Order[]
+}
+
+// ========================
+// ORDERS
+// ========================
+model Order {
+  id                   String    @id @default(uuid())
+  user                 User      @relation("UserOrders", fields: [userId], references: [id])
+  userId               String
+  worker               User?     @relation("WorkerOrders", fields: [workerId], references: [id])
+  workerId             String?
+  driver               User?     @relation("DriverOrders", fields: [driverId], references: [id])
+  driverId             String?
+  service              Service   @relation(fields: [serviceId], references: [id])
+  serviceId            String
+
+  quantity             Int
+  weight               Float?
+  requestedDate        DateTime
+  scheduledStartTime   DateTime?
+  estimatedDuration    Int?      
+  urgent               Boolean   @default(false)
+  notes                String?
+  status               OrderStatus @default(PENDING)
+
+  snapshotFullName     String
+  snapshotPhone        String
+  snapshotLocation     String
+  partialFulfilledUnits Int?      @default(0)
+
+  ratings              Rating[]
+  notifications        Notification[]
+
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
+// ========================
+// RATINGS
+// ========================
+model Rating {
+  id        String      @id @default(uuid())
+
+  order     Order    @relation(fields: [orderId], references: [id])
+  orderId   String
+
+  user      User     @relation("UserRatingsGiven", fields: [userId], references: [id])
+  userId    String
+
+  worker    User     @relation("WorkerRatingsReceived", fields: [workerId], references: [id])
+  workerId  String
+
+  stars     Int
+  comment   String?
+  createdAt DateTime @default(now())
+}
+
+// ========================
+// NOTIFICATIONS
+// ========================
+model Notification {
+  id        String      @id @default(uuid())
+
+  user      User?    @relation("UserNotifications", fields: [userId], references: [id])
+  userId    String?
+
+  admin     User?    @relation("AdminNotifications", fields: [adminId], references: [id])
+  adminId   String?
+
+  order     Order?   @relation(fields: [orderId], references: [id])
+  orderId   String?
+
+  type      NotificationType
+  message   String
+  read      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+}
+
+// ========================
+// DAILY CAPACITY
+// ========================
+model DailyCapacity {
+  date        DateTime  @id
+  maxUnits    Int
+  usedUnits   Int       @default(0)
+  cutoffTime  DateTime
+  urgentLimit Int? 
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}

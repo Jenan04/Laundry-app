@@ -103,6 +103,5 @@ npx prisma migrate dev
 4. Start development server:
 ```
 npm run dev
-
-
 ```
+
