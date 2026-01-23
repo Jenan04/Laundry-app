@@ -52,8 +52,9 @@ export default function SignUp() {
       toast.success('Registration successful! Redirecting to verify...');
       router.push('/verify');
     } catch (error) {
-      toast.error(error as string);
+      console.error(error as string);
     }
+    
   };
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {

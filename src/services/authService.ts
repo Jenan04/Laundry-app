@@ -124,5 +124,10 @@ export const authService = {
         is_completed: true,
       }
     });
+  },
+
+  async isEmailTaken(email: string) {
+    const user = await prisma.user.findUnique({ where: { email } })
+    return !!user; // the aim of !! convert the value to boolean type
   }
 };

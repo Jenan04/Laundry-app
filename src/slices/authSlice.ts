@@ -89,19 +89,6 @@ export const signupStep1 = createAsyncThunk(
 );
 
 // الخطوة 2: التحقق من الكود
-// export const verifyOtp = createAsyncThunk(
-//   'auth/verifyOtp',
-//   async (args: { userId: string; otp: string }, thunkAPI) => {
-//     try {
-//       const data = await graphqlRequest(VERIFY_OTP_MUTATION, args);
-//       return data.verifyStep2;
-//     } catch (err: any) {
-//       return thunkAPI.rejectWithValue(err.message);
-//     }
-//   }
-// );
-
-// الخطوة 2: التحقق من الكود
 export const verifyOtp = createAsyncThunk<
   { id: string; is_verifid: boolean; is_completed: boolean }, // نوع البيانات الراجعة
   { userId: string; otp: string },                            // نوع المدخلات
@@ -136,6 +123,29 @@ export const completeProfile = createAsyncThunk(
       return data.completeStep3;
     } catch (err) {
       return thunkAPI.rejectWithValue(err instanceof Error ? err.message : 'Update failed');
+    }
+  }
+);
+
+export const checkEmail = createAsyncThunk<
+  boolean,             // نوع البيانات الراجعة (true إذا موجود)
+  string,              // نوع المدخلات (الإيميل)
+  { rejectValue: string }
+>(
+  'auth/checkEmail',
+  async (email, thunkAPI) => {
+    try {
+      const data = await graphqlRequest<{ isEmailTaken: boolean }>(
+        `
+        query IsEmailTaken($email: String!) {
+          isEmailTaken(email: $email)
+        }
+        `,
+        { email }
+      );
+      return data.isEmailTaken;
+    } catch (err) {
+      return thunkAPI.rejectWithValue(err instanceof Error ? err.message : 'Email check failed');
     }
   }
 );

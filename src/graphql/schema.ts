@@ -11,6 +11,7 @@ export const typeDefs = `
     location: String
     is_verifid: Boolean!
     is_completed: Boolean!
+    role: String!
   }
 
   type AuthResponse {

@@ -32,6 +32,16 @@ interface ProfileInput {
 }
 
 export const authController = {
+
+  async checkEmailTaken(_parent: unknown, args: { email: string}) {
+    try{
+      const taken = await authService.isEmailTaken(args.email)
+      return{ isTaken: taken};
+    } catch(err){
+      throw new Error("faild to check email")
+    }
+  },
+
   signupStep1: async (_: unknown, { email, passwordHash }: SignupArgs) => {
     const user = await authService.preSignup(email, passwordHash);
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'secret');
