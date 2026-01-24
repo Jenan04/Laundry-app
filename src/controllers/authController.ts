@@ -1,29 +1,19 @@
-// src/controllers/authController.ts
 import { authService } from '@/services/authService';
 import jwt from 'jsonwebtoken';
 import { GoogleArgs } from "@/types/index";
-// import { GraphQLError } from 'graphql';
-// import { CustomSession } from '@/types/index';
+
 import { MyContext } from '@/types/index';
+
 
 interface SignupArgs {
   email: string;
-  passwordHash: string; // تأكدي من تسميته password في الـ schema
+  passwordHash: string; 
 }
 
 interface VerifyArgs {
   userId: string;
   otp: string;
 }
-
-// interface ProfileArgs {
-//   userId: string;
-//   profileData: {
-//     full_name: string;
-//     phone: string;
-//     location: string;
-//   };
-// }
 
 interface ProfileInput {
   full_name: string;
@@ -56,10 +46,9 @@ export const authController = {
 completeStep3: async (
     _: unknown, 
     { profileData }: { profileData: ProfileInput }, 
-    // context: { userId?: string; session?: CustomSession }
     context: MyContext
   ) => {
-    // ✅ 1. تحقق من وجود userId في الـ context (من NextAuth session)
+
     const userId = context.userId;
     
     if (!userId) {
@@ -69,7 +58,6 @@ completeStep3: async (
     console.log('Completing profile for user:', userId);
 
     try {
-      // ✅ 2. حفظ البيانات في الـ database
       const updatedUser = await authService.completeProfile(userId, profileData);
       
       console.log('Profile completed successfully:', updatedUser);
@@ -83,16 +71,17 @@ completeStep3: async (
 
    googleSignIn: async (_: unknown, { profile, user }: GoogleArgs) => {
     try {
-      // 1. البحث عن user موجود أو إنشاء جديد
       const userId = await authService.findOrCreateGoogleUser(profile, user);
 
-      // 2. إنشاء JWT
       const token = jwt.sign({ userId }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
 
-      // 3. ارجاع userId + token → تستخدمهم frontend لل redirect / session
       return { userId, token };
     } catch (err) {
       throw new Error('Google Sign-In failed');
     }
+  },
+
+  login: async (_: unknown, args: {email: string, password: string }) => {
+    return await authService.login(args.email, args.password);
   }
 };

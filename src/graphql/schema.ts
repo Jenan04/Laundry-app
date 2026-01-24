@@ -19,6 +19,10 @@ export const typeDefs = `
     user: User!
   }
 
+  type CheckEmailResponse {
+  isTaken: Boolean!
+ }
+
   input ProfileInput {
     full_name: String!
     phone: String!
@@ -27,6 +31,7 @@ export const typeDefs = `
 
   type Query {
     me: User
+    checkEmail(email: String!): CheckEmailResponse!
   }
 
   type Mutation {
@@ -38,5 +43,6 @@ export const typeDefs = `
     
     # الخطوة 3: إكمال البيانات
     completeStep3(profileData: ProfileInput!): User!
+    login(email: String!, password: String!): AuthResponse!
   }
 `;

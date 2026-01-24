@@ -3,6 +3,7 @@
 =بينفذ الاوبيريشنز الي وعدنا فيها السكيما وبيرجع الداتا الحقيقية
 = هي العقدة العملية 
 */
+import LogIn from '@/app/login/page';
 import { authController } from '@/controllers/authController';
 import { MyContext } from '@/types/index';
 /*
@@ -23,10 +24,12 @@ export const resolvers = {
       // يمكنك جلب بيانات المستخدم من DB هنا
       return context.session?.user;
      },
+     checkEmail: authController.checkEmailTaken,
   },
   Mutation: {
     signupStep1: authController.signupStep1,
     verifyStep2: authController.verifyStep2,
     completeStep3: authController.completeStep3,
+    login: authController.login,
   },
 };

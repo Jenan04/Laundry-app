@@ -6,18 +6,11 @@ import { authOptions } from '@/lib/nextAuth';
 import { MyContext } from '@/types';
 
 
-// interface MyContext  {
-//   userId?: string | null;
-// };
-
-// إعداد السكيمـا
 const schema = createSchema({
   typeDefs,
   resolvers,
 });
 
-
-// const { handleRequest } = createYoga<MyContext>({
 const yoga = createYoga<MyContext>({
   schema,
   graphqlEndpoint: '/api/graphql',
@@ -27,7 +20,7 @@ const yoga = createYoga<MyContext>({
     const session = await getServerSession(authOptions); 
     return {
       session,
-      userId: session?.user?.id, // نحطها في الـ context عشان سهلة الوصول
+      userId: session?.user?.id, 
       request,
     };
   },
