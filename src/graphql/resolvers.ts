@@ -21,7 +21,6 @@ export const resolvers = {
       if (!context.userId) {
         throw new Error('Not authenticated');
       }
-      // يمكنك جلب بيانات المستخدم من DB هنا
       return context.session?.user;
      },
      checkEmail: authController.checkEmailTaken,
@@ -31,5 +30,6 @@ export const resolvers = {
     verifyStep2: authController.verifyStep2,
     completeStep3: authController.completeStep3,
     login: authController.login,
+    sendVerificationOtp: authController.sendVerificationOtp,
   },
 };

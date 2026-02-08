@@ -1,9 +1,8 @@
-// src/services/authService.ts
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { GoogleProfile, GoogleUser } from"@/types/index";
 import jwt from "jsonwebtoken";
-
+import { sendOTPEmail } from '@/lib/mailer';
 export const authService = {
 
   async preSignup(email: string, passwordHash: string) {
@@ -27,14 +26,38 @@ export const authService = {
         is_verifid: false,
       },
     });
-    return user;
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    const verificationToken = jwt.sign(
+      { userId: user.id, otp },
+      process.env.JWT_SECRET || 'otp_secret_key',
+      { expiresIn: '5m' }
+    );
+
+    console.log(`OTP for ${email}: ${otp}`); 
+    await sendOTPEmail(email, otp);
+
+    return { user, verificationToken };
   },
 
-  async verifyOtp(userId: string, otp: string) {
-    return await prisma.user.update({
-      where: { id: userId },
-      data: { is_verifid: true },
-    });
+  async verifyOtpLogic(otp: string, verificationToken: string) {
+    try {
+      const decoded = jwt.verify(
+        verificationToken,
+        process.env.JWT_SECRET || 'otp_secret_key'
+      ) as { userId: string, otp: string };
+
+      if (decoded.otp !== otp) {
+        throw new Error("INVALID_OTP");
+      }
+
+      return await prisma.user.update({
+        where: { id: decoded.userId },
+        data: { is_verifid: true },
+      });
+    } catch (err) {
+      throw new Error("OTP_EXPIRED_OR_INVALID");
+    }
   },
 
   async completeProfile(userId: string, data: { full_name: string, phone: string, location: string }) {
@@ -161,9 +184,38 @@ export const authService = {
       id: user.id,
       email: user.email,
       full_name: user.full_name,
+      is_verifid: user.is_verifid,
       role: user.role,
       is_completed: user.is_completed,
     },
   } 
-  }
+  },
+  async sendVerificationOtp(email: string) {
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      throw new Error("USER_NOT_FOUND");
+    }
+
+    if (user.is_verifid) {
+      throw new Error("ALREADY_VERIFIED");
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    const verificationToken = jwt.sign(
+      { userId: user.id, otp },
+      process.env.JWT_SECRET!,
+      { expiresIn: '5m' }
+    );
+
+    await sendOTPEmail(email, otp);
+
+    return {
+      verificationToken,
+      user
+    };
+  } 
 };

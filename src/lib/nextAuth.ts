@@ -1,6 +1,7 @@
 import GoogleProvider from "next-auth/providers/google";
-import { DefaultSession, NextAuthOptions, Session, } from "next-auth";
+import { DefaultSession, NextAuthOptions } from "next-auth";
 import { authService } from "@/services/authService";
+import CredentialsProvider from "next-auth/providers/credentials";
 
 declare module "next-auth" {
     interface User {
@@ -29,74 +30,90 @@ export const authOptions: NextAuthOptions = {
         GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID!,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        }),
+        CredentialsProvider({
+            name: "Credentials",
+            credentials: {
+                email: { label: "Email", type: "text" },
+                password: { label: "Password", type: "password" }
+            },
+            async authorize(credentials) {
+                if (!credentials?.email || !credentials?.password) return null;
+                
+                const result = await authService.login(credentials.email, credentials.password);
+                
+                if (result && result.user) {
+                    return {
+                        id: result.user.id,
+                        email: result.user.email,
+                        name: result.user.full_name,
+                        role: result.user.role,
+                        completed: result.user.is_completed, 
+                    };
+                }
+                return null;
+            }
         })
     ],
     
     session: {
-        strategy:"jwt",
+        strategy: "jwt",
         maxAge: 30 * 24 * 60 * 60,
     },
 
-   callbacks: {
-     async signIn({ profile, user }) {
-       if (!profile?.sub || !user?.email) return false;
-       return true;
-     },
+    callbacks: {
+        async signIn({ account, user }) {
+            if (account?.provider === "google") {
+                return !!user.email;
+            }
+            return true;
+        },
 
-    async jwt({ token, user, profile, trigger }) {
-      if (profile?.sub && user?.email) {
-        try{
-        const dbUser = await authService.findOrCreateGoogleUser(
-          { sub: profile.sub, email: profile.email! },
-          { name: user.name!, email: user.email }
-        );
+        async jwt({ token, user, profile, trigger }) {
+            
+            if (user) {
+                token.id = user.id;
+                token.role = user.role;
+                token.completed = user.completed; 
+            }
 
-        token.id = dbUser.id;
-        token.role = dbUser.role;
-        token.completed = dbUser.is_completed;
-      } catch (error) {
-         console.error("JWT callback error:", error);
-         return token;
+            if (profile) {
+                try {
+                    const dbUser = await authService.findOrCreateGoogleUser(
+                        { sub: profile.sub!, email: profile.email! },
+                        { name: profile.name!, email: profile.email! }
+                    );
+                    token.id = dbUser.id;
+                    token.role = dbUser.role;
+                    token.completed = dbUser.is_completed; // نأخذ الحالة الحقيقية من الداتابيز
+                } catch (error) {
+                    console.error("Google Sync Error:", error);
+                }
+            }
+
+            if (trigger === "update" && token.id) {
+                const updatedUser = await authService.getUserById(token.id as string);
+                if (updatedUser) {
+                    token.completed = updatedUser.is_completed;
+                    token.role = updatedUser.role;
+                }
+            }
+            return token;
+        },
+
+        async session({ session, token }) {
+            if (session.user) {
+                session.user.id = token.id as string;
+                session.user.role = token.role as string;
+                session.user.completed = token.completed as boolean;
+            }
+            return session;
+        },
+
+        async redirect({ url, baseUrl }) {
+            if (url.startsWith("/")) return `${baseUrl}${url}`;
+            else if (new URL(url).origin === baseUrl) return url;
+            return `${baseUrl}/dashboard`;
         }
-      }
-      if (trigger === "update" && token.id) {
-         try {
-           const updatedUser = await authService.getUserById(token.id as string);
-           if (updatedUser) {
-             token.completed = updatedUser.is_completed;
-             token.role = updatedUser.role;
-           }
-         } catch (error) {
-          console.error("Token update error:", error);
-         }
-       }
-  
-       return token;
-    },
-
-  async session({ session, token }) {
-    if (session.user) {
-      session.user.id = token.id as string;
-      session.user.role = token.role as string | undefined;
-      session.user.completed = token.completed as boolean | undefined;
     }
-    return session;
-  },
-
-  async redirect({ baseUrl }) {
-    return `${baseUrl}/dashboard`;
-  }
-},
-
-
-}
-    // secret:  if we need tokens start generated by any secerts ...
-    // pages:{
-    //     signIn: '/signup',
-    //     newUser:'welcom'
-    // }
-
-// console.log({
-//   id: process.env.GOOGLE_CLIENT_ID,
-//   secret: process.env.GOOGLE_CLIENT_SECRET,
-// });
+};

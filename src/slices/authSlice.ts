@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
-// --- 1. تعريف الـ Mutations الجديدة ---
 
 const SIGNUP_STEP1_MUTATION = `
   mutation SignupStep1($email: String!, $password: String!) {

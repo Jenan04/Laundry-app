@@ -6,6 +6,7 @@ import { FaGoogle } from "react-icons/fa";
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast'
 
 const LOGIN_MUTATION = `
   mutation Login($email: String!, $password: String!) {
@@ -14,8 +15,9 @@ const LOGIN_MUTATION = `
       user {
         id
         email
-        full_name
-        role
+        #full_name
+        #role
+        is_verifid
         is_completed
       }
     }
@@ -30,43 +32,59 @@ export default function LogIn() {
 
   const router = useRouter();
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
-const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
+    try {
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false, 
+      });
 
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/graphql`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        query: LOGIN_MUTATION,
-        variables: { email, password },
-      }),
+      
+      if (result?.error) {
+        toast.error("خطأ في البيانات أو لم يتم العثور على المستخدم");
+        } else {
+          router.push('/create-profile');
+          router.refresh(); 
+        }
+
+    
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/graphql`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: LOGIN_MUTATION, // نفس الميوتيشن الخاص بكِ
+          variables: { email, password },
+        }),
+      });
+
+      const graphQLResult = await res.json();
+      const user = graphQLResult.data.login.user;
+
+      if (!user.is_verifid) {
+        router.push(`/verify-email?email=${user.email}`);
+      } else if (!user.is_completed) {
+        router.push('/create-profile');
+      } else {
+        router.push('/dashboard');
+      }
+
+     } catch (err) {
+       console.error("Login Error:", err);
+     } finally {
+       setLoading(false);
+     }
+  };
+
+    const handleGoogleSignIn = async () => {
+    await signIn("google", { 
+      callbackUrl: "/dashboard", 
+      redirect: true 
     });
-
-    const result = await res.json();
-    if (result.errors) throw new Error(result.errors[0].message);
-
-    const { user } = result.data.login;
-
-    if (!user.is_verifid) {
-      router.push('/verify-email');
-    } else if (!user.is_completed) {
-      router.push('/create-profile');
-    } else {
-      router.push('/dashboard');
-    }
-
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-
-  const handleGoogleSignIn = async () => {
-     await signIn("google");
-  }
+  };
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-white relative p-4">
       
