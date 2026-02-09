@@ -15,19 +15,23 @@ export default function EmailVerification() {
   const [otp, setOtp] = useState<string[]>(['', '', '', '', '', ''])
   const [timeLeft, setTimeLeft] = useState(60)
   const [isVerifying, setIsVerifying] = useState(false)
-
+  const [checkingParams, setCheckingParams] = useState(true);
   const inputRefs = useRef<HTMLInputElement[]>([])
 
   useEffect(() => {
     const emailParam = searchParams.get('email')
-
-    if (!emailParam) {
-      toast.error('Invalid session')
-      router.push('/login')
-      return
+      if (emailParam) {
+      setEmail(emailParam);
+      setCheckingParams(false);
+    } else {
+      const timer = setTimeout(() => {
+        if (!searchParams.get('email')) {
+          toast.error('Invalid session');
+          router.push('/login');
+        }
+      }, 500);
+      return () => clearTimeout(timer);
     }
-
-    setEmail(emailParam)
   }, [searchParams, router])
 
 
@@ -214,7 +218,9 @@ export default function EmailVerification() {
       toast.error('Network error')
     }
   }
-
+if (checkingParams) {
+  return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+}
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50/50 py-10">
       <div className="p-8 sm:p-12 rounded-lg w-full max-w-5xl">

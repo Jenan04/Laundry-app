@@ -27,6 +27,7 @@ export const config = {
   matcher: [
     "/dashboard/:path*", 
     "/chat/:path*", 
-    "/create-profile"
+    "/create-profile",
+    "/feed"
   ],
 };
