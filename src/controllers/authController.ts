@@ -41,7 +41,7 @@ export const authController = {
 
   signupStep1: async (_: unknown, { email, passwordHash }: SignupArgs) => {
     try {
-      const { user, verificationToken } = await authService.preSignup(email, passwordHash);
+      const { user} = await authService.preSignup(email, passwordHash);
 
       const userWithDefaults = {
         ...user,
@@ -51,7 +51,7 @@ export const authController = {
         role: user.role ?? "USER",
       };
 
-      return { user: userWithDefaults, verificationToken };
+      return { user: userWithDefaults };
     } catch (error: unknown) {
       throw new Error(error instanceof Error ? error.message : "Unknown error");
     }

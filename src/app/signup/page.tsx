@@ -87,7 +87,7 @@ export default function SignUp() {
     try {
       const result = await dispatch(signupStep1({ email, password })).unwrap();
       toast.success('Registration successful! Redirecting to verify...');
-      router.push('/verify-email');
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (error) {
       console.error(error as string);
     }

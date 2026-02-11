@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { toast } from 'react-hot-toast'
@@ -17,28 +16,31 @@ export default function EmailVerification() {
   const [isVerifying, setIsVerifying] = useState(false)
   const [checkingParams, setCheckingParams] = useState(true);
   const inputRefs = useRef<HTMLInputElement[]>([])
+  const hasSentOtp = useRef(false);
+
+  useEffect(() => {   
+  const emailParam = searchParams.get('email');
+  
+  if (emailParam) {
+    setEmail(emailParam);
+    setCheckingParams(false);
+  } else {
+   
+    setCheckingParams(false); 
+  }
+  }, [searchParams]);
 
   useEffect(() => {
-    const emailParam = searchParams.get('email')
-      if (emailParam) {
-      setEmail(emailParam);
-      setCheckingParams(false);
-    } else {
-      const timer = setTimeout(() => {
-        if (!searchParams.get('email')) {
-          toast.error('Invalid session');
-          router.push('/login');
-        }
-      }, 500);
-      return () => clearTimeout(timer);
+    if (!checkingParams && !email) {
+      toast.error('Invalid session - No email provided');
+      router.push('/login');
     }
-  }, [searchParams, router])
+  }, [checkingParams, email, router]);
+    useEffect(() => {
+      if (!email || hasSentOtp.current) return
 
-
-  useEffect(() => {
-    if (!email) return
-
-    const sendOtp = async () => {
+      const sendOtp = async () => {
+      hasSentOtp.current = true;
       try {
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_BASE_URL}/api/graphql`,
@@ -74,12 +76,13 @@ export default function EmailVerification() {
         inputRefs.current[0]?.focus()
 
       } catch {
+        hasSentOtp.current = false;
         toast.error('Network error')
       }
-    }
+      }
 
-    sendOtp()
-  }, [email])
+      sendOtp()
+    }, [email])
 
   useEffect(() => {
     if (timeLeft <= 0) return
@@ -112,13 +115,14 @@ export default function EmailVerification() {
     }
   }
 
-  const handleVerify = async (code: string) => {
+
+const handleVerify = async (code: string) => {
     if (!verificationToken) {
-      toast.error('Session expired')
-      return
+      toast.error('Session expired');
+      return;
     }
 
-    setIsVerifying(true)
+    setIsVerifying(true);
 
     try {
       const res = await fetch(
@@ -140,39 +144,34 @@ export default function EmailVerification() {
             variables: { otp: code, verificationToken }
           })
         }
-      )
-
+      );
 
       const result = await res.json();
-       if (!result.errors) {
-        await signIn("credentials", {
-          email: email,
-          redirect: true,
-          callbackUrl: "/create-profile", 
-        });
-        }
 
       if (result.errors) {
-        toast.error('Invalid or expired code')
-        setOtp(Array(6).fill(''))
-        inputRefs.current[0]?.focus()
-        return
+        toast.error('Invalid or expired code');
+        setOtp(Array(6).fill(''));
+        inputRefs.current[0]?.focus();
+        return;
       }
+      const { token, user } = result.data.verifyStep2;
 
-      const { token, user } = result.data.verifyStep2
-      localStorage.setItem('token', token)
+      localStorage.setItem('token', token);
 
-      toast.success('Email verified successfully')
+      toast.success('Email verified successfully');
 
-      router.push(user.is_completed ? '/chat' : '/create-profile')
-
-    } catch {
-      toast.error('Network error')
+      if (user.is_completed) {
+        router.push('/chat');
+      } else {
+        router.push('/create-profile');
+      }
+      
+    } catch (error) {
+      toast.error('Network error');
     } finally {
-      setIsVerifying(false)
+      setIsVerifying(false);
     }
-  }
-
+  };
 
   const handleResend = async () => {
     if (timeLeft > 0) return

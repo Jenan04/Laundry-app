@@ -26,18 +26,18 @@ export const authService = {
         is_verifid: false,
       },
     });
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    const verificationToken = jwt.sign(
-      { userId: user.id, otp },
-      process.env.JWT_SECRET || 'otp_secret_key',
-      { expiresIn: '5m' }
-    );
+    // const verificationToken = jwt.sign(
+    //   { userId: user.id, otp },
+    //   process.env.JWT_SECRET || 'otp_secret_key',
+    //   { expiresIn: '5m' }
+    // );
 
-    console.log(`OTP for ${email}: ${otp}`); 
-    await sendOTPEmail(email, otp);
+    // console.log(`OTP for ${email}: ${otp}`); 
+    // await sendOTPEmail(email, otp);
 
-    return { user, verificationToken };
+    return { user };
   },
 
   async verifyOtpLogic(otp: string, verificationToken: string) {

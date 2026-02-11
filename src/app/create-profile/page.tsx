@@ -10,7 +10,6 @@ import 'react-phone-input-2/lib/style.css';
 
 import LocationModal from '../component/locationModal.client'; // مسار الملف الجديد
 
-// -------------------- GraphQL mutation --------------------
 const COMPLETE_PROFILE = gql`
   mutation CompleteProfile($profileData: ProfileInput!) {
     completeStep3(profileData: $profileData) {
@@ -40,7 +39,7 @@ export default function CreateProfile() {
   }, [status, session, router]);
 
   const handleSave = async () => {
-    if (!fullName || !phone || !location) {
+    if (!fullName.trim() || !phone || !location) {
       toast.error('Please fill all fields');
       return;
     }
@@ -51,10 +50,24 @@ export default function CreateProfile() {
       return;
     }
 
+    const cleanPhone = phone.replace(/\D/g, ''); 
+
+    const palestinePhoneRegex = /^(970|972)?5[69]\d{7}$/;
+
+    if (!palestinePhoneRegex.test(cleanPhone)) {
+      toast.error('Please enter a valid Palestinian phone number (Jawwal or Ooredoo)')
+      return;
+    }
+
     setLoading(true);
     try {
-      const client = new GraphQLClient(`${process.env.NEXT_PUBLIC_BASE_URL}/api/graphql`, { credentials: 'include' });
-      const variables = { profileData: { full_name: fullName, phone, location } };
+      const client = new GraphQLClient(`${process.env.NEXT_PUBLIC_BASE_URL}/api/graphql`, { 
+         headers: {
+          authorization: `Bearer ${localStorage.getItem('token')}`, // إرسال التوكن يدوياً
+        },
+        credentials: 'include' 
+      });
+      const variables = { profileData: { full_name: fullName.trim(), phone: cleanPhone, location } };
       const response = await client.request(COMPLETE_PROFILE, variables);
 
       if (response.completeStep3?.is_completed) {
@@ -72,6 +85,7 @@ export default function CreateProfile() {
       setLoading(false);
     }
   };
+ 
 
   if (status === "loading") return (
     <div className="min-h-screen flex items-center justify-center">
@@ -88,7 +102,6 @@ export default function CreateProfile() {
           One more step to get started
         </h1>
 
-        {/* Full Name */}
         <div className="flex flex-col mb-4">
           <label className="mb-1 font-medium text-[#733F3F]">Full Name</label>
           <input
@@ -101,40 +114,40 @@ export default function CreateProfile() {
           />
         </div>
 
-        {/* Phone Input */}
         <div className="flex flex-col mb-4">
           <label className="mb-1 font-medium text-[#733F3F]">Phone Number</label>
           <PhoneInput
             country={'ps'}
+            onlyCountries={['ps']}
             value={phone}
             onChange={(phoneValue: string, countryData: CountryData) => {
               setPhone(phoneValue);
               setCountry(countryData.name);
             }}
+            placeholder="059 000 0000"
 
             inputStyle={{
               width: '100%',
-              padding: '1rem 2.5rem', // نفس px-4 py-3
-              borderRadius: '9999px', // same rounded-full
+              padding: '1rem 2.5rem', 
+              borderRadius: '9999px', 
               border: '1px solid #D6B2B2',
               outline: 'none',
               transition: 'all 0.2s',
               color: '#000',
             }}
             buttonStyle={{
-              borderRadius: '9999px', // لتنسيق العلم والdropdown
+              borderRadius: '9999px', 
               border: '1px solid #D6B2B2',
             }}
             dropdownStyle={{
               borderRadius: '0.75rem',
               overflow: 'hidden',
             }}
-            disableDropdown={false} // يسمح باختيار البلد
+            disableDropdown={false} 
             disabled={loading}
           />
         </div>
 
-        {/* Location Button */}
         <div className="flex flex-col mb-6">
           <label className="mb-1 font-medium text-[#733F3F]">Location</label>
           <button
@@ -145,7 +158,6 @@ export default function CreateProfile() {
           </button>
         </div>
 
-        {/* Save Button */}
         <button
           onClick={handleSave}
           disabled={loading}
@@ -154,7 +166,6 @@ export default function CreateProfile() {
           {loading ? "Saving..." : "Save"}
         </button>
 
-        {/* Location Modal */}
         <LocationModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
