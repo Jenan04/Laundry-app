@@ -11,6 +11,13 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { signIn } from "next-auth/react";
 
+const CHECK_EMAIL_QUERY = `
+  query CheckEmail($email: String!) {
+    checkEmail(email: $email) {
+      isTaken
+    }
+  }
+`;
 export default function SignUp() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,6 +25,7 @@ export default function SignUp() {
 
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [checkingEmail, setCheckingEmail] = useState(false);
 
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
@@ -36,6 +44,29 @@ export default function SignUp() {
     return '';
   };
 
+  const checkEmailTaken = async (email: string) => {
+    try {
+      setCheckingEmail(true);
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/graphql`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: CHECK_EMAIL_QUERY,
+          variables: { email },
+        }),
+      });
+
+      const json = await res.json();
+      return json?.data?.checkEmail?.isTaken as boolean;
+    } catch (err) {
+      console.error(err);
+      return false;
+    } finally {
+      setCheckingEmail(false);
+    }
+  };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -47,23 +78,30 @@ export default function SignUp() {
 
     if (emailErr || passwordErr) return; // Stop if any error
 
+    const isTaken = await checkEmailTaken(email);
+    if (isTaken) {
+      setEmailError('This email is already registered.');
+      return;
+    }
+
     try {
       const result = await dispatch(signupStep1({ email, password })).unwrap();
       toast.success('Registration successful! Redirecting to verify...');
-      router.push('/verify');
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (error) {
-      toast.error(error as string);
+      console.error(error as string);
     }
+    
   };
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
   setEmail(e.target.value);
-  if (emailError) setEmailError(''); // إزالة الخطأ فور التعديل
+  if (emailError) setEmailError('');
 };
 
 const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
   setPassword(e.target.value);
-  if (passwordError) setPasswordError(''); // إزالة الخطأ فور التعديل
+  if (passwordError) setPasswordError(''); 
 };
 
 const handleGoogleSignIn = async () => {
@@ -101,15 +139,24 @@ const handleGoogleSignIn = async () => {
               placeholder="Email Address"
               value={email}
               onChange={handleEmailChange}
-              onBlur={() => setEmailError(validateEmail(email))}
+               onBlur={async () => {
+                  const formatError = validateEmail(email);
+                  if (formatError) {
+                    setEmailError(formatError);
+                    return;
+                  }
+
+                  const isTaken = await checkEmailTaken(email);
+                  if (isTaken) {
+                    setEmailError('This email is already registered.');
+                  }
+                }}
               className="w-full pl-12 pr-4 py-4 bg-[#F2E9E9]/50 border border-[#D6B2B2]/30 rounded-full outline-none focus:border-[#733F3F] focus:ring-[.7] focus:ring-[#733F3F] transition-all"
             />
-           
           </div> 
           {emailError && <p className="text-red-500 text-sm mt-1">{emailError}</p>}
           </div>
 
-          {/* Password */}
           <div className="flex flex-col gap-1">
           <div className="relative group">
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#D6B2B2] group-focus-within:text-[#733F3F] transition-colors" size={20} />
@@ -133,7 +180,6 @@ const handleGoogleSignIn = async () => {
           {passwordError && <p className="text-red-500 text-sm mt-1 min-h-[1.25rem]">{passwordError}</p>}
           </div>
 
-          {/* Submit */}
           <button
             type="submit"
             className="w-full py-4 bg-[#592E2E] text-white rounded-full font-bold text-lg hover:bg-[#733F3F] transition-all shadow-lg shadow-[#592E2E]/20 active:scale-[0.98]"

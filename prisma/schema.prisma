@@ -43,7 +43,7 @@ model User {
   email        String       @unique
   phone        String
   location     String
-  role         Role        @default("USER")
+  role         Role        @default(USER)
   passwordHash String?  
   google_id    String?      @unique
   is_verifid   Boolean      @default(false)

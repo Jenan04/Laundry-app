@@ -29,7 +29,7 @@ export interface CountryData {
 
 export interface LimbProps {
   position: [number, number, number];
-  rotation?: [number, number, number]; // اختياري لأن له قيمة افتراضية [0,0,0]
+  rotation?: [number, number, number]; 
   isArm?: boolean;
 }
 
