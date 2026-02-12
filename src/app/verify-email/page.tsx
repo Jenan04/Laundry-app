@@ -148,23 +148,24 @@ const handleVerify = async (code: string) => {
 
       const result = await res.json();
 
-      if (result.errors) {
-        toast.error('Invalid or expired code');
-        setOtp(Array(6).fill(''));
-        inputRefs.current[0]?.focus();
+    if (result.errors) {
+      const errorMsg = result.errors[0]?.message;
+
+    if (errorMsg === 'ALREADY_VERIFIED') {
+        await completeSignIn(false); 
         return;
       }
-      const { token, user } = result.data.verifyStep2;
 
-      localStorage.setItem('token', token);
+      toast.error('Invalid or expired code');
+      setOtp(Array(6).fill(''));
+      inputRefs.current[0]?.focus();
+      return;
+    }
 
-      toast.success('Email verified successfully');
+    const { token, user } = result.data.verifyStep2;
+    localStorage.setItem('token', token);
 
-      if (user.is_completed) {
-        router.push('/chat');
-      } else {
-        router.push('/create-profile');
-      }
+    await completeSignIn(user.is_completed);
       
     } catch (error) {
       toast.error('Network error');
@@ -172,6 +173,21 @@ const handleVerify = async (code: string) => {
       setIsVerifying(false);
     }
   };
+  const completeSignIn = async (isCompleted: boolean) => {
+  const nextAuthSignIn = await signIn("credentials", {
+    email: email, 
+    redirect: false,
+  });
+
+  if (nextAuthSignIn?.error) {
+    toast.error('Session synchronization failed. Redirecting to login...');
+    setTimeout(() => router.push('/login'), 2000);
+    return;
+  }
+  
+  toast.success('Access granted successfully');
+  router.push(isCompleted ? '/chat' : '/create-profile');
+};
 
   const handleResend = async () => {
     if (timeLeft > 0) return

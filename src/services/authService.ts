@@ -217,5 +217,18 @@ export const authService = {
       verificationToken,
       user
     };
-  } 
+  },
+  async getUserByEmail(email: string) {
+    return await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        full_name: true,
+        role: true,
+        is_verifid: true,
+        is_completed: true,
+      }
+    });
+  }, 
 };

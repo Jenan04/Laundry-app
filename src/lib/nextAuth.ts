@@ -37,22 +37,56 @@ export const authOptions: NextAuthOptions = {
                 email: { label: "Email", type: "text" },
                 password: { label: "Password", type: "password" }
             },
-            async authorize(credentials) {
-                if (!credentials?.email || !credentials?.password) return null;
+            // async authorize(credentials) {
+            //     if (!credentials?.email || !credentials?.password) return null;
                 
-                const result = await authService.login(credentials.email, credentials.password);
+            //     const result = await authService.login(credentials.email, credentials.password);
                 
-                if (result && result.user) {
-                    return {
-                        id: result.user.id,
-                        email: result.user.email,
-                        name: result.user.full_name,
-                        role: result.user.role,
-                        completed: result.user.is_completed, 
-                    };
-                }
-                return null;
-            }
+            //     if (result && result.user) {
+            //         return {
+            //             id: result.user.id,
+            //             email: result.user.email,
+            //             name: result.user.full_name,
+            //             role: result.user.role,
+            //             completed: result.user.is_completed, 
+            //         };
+            //     }
+            //     return null;
+            // }
+            // داخل CredentialsProvider في authOptions
+async authorize(credentials) {
+    // 1. التحقق من وجود الإيميل على الأقل
+    if (!credentials?.email) return null;
+
+    // 2. إذا كانت كلمة المرور مفقودة (حالة تسجيل الدخول بعد الـ OTP)
+    if (!credentials?.password) {
+        // ابحث عن المستخدم وتأكد أنه موثق فعلاً
+        const user = await authService.getUserByEmail(credentials.email); 
+        if (user && user.is_verifid) {
+            return {
+                id: user.id,
+                email: user.email,
+                name: user.full_name,
+                role: user.role,
+                completed: user.is_completed,
+            };
+        }
+        return null; // ارفض إذا لم يكن موثقاً
+    }
+
+    // 3. الحالة العادية (تسجيل الدخول التقليدي بالباسورد)
+    const result = await authService.login(credentials.email, credentials.password);
+    if (result && result.user) {
+        return {
+            id: result.user.id,
+            email: result.user.email,
+            name: result.user.full_name,
+            role: result.user.role,
+            completed: result.user.is_completed,
+        };
+    }
+    return null;
+}
         })
     ],
     
